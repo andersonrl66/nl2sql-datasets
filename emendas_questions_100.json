@@ -1,0 +1,874 @@
+[
+  {
+    "question_id": 0,
+    "db_id": "emendas",
+    "question": "Qual o valor total da dotação inicial das emendas para o exercício de 2024?",
+    "evidence": "A dotação inicial está na coluna VL_DOT_INICIAL da tabela de fatos.",
+    "SQL": "SELECT SUM(VL_DOT_INICIAL) FROM SIAFI_FATO_EXEC_EMENDA WHERE EXERCICIO_ID = 2024",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 1,
+    "db_id": "emendas",
+    "question": "Liste os nomes de todos os autores de emendas registrados no sistema.",
+    "evidence": "Os nomes dos autores estão na dimensão LOA_DIM_EMENDA.",
+    "SQL": "SELECT DISTINCT AUTOR_NOME FROM LOA_DIM_EMENDA",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 2,
+    "db_id": "emendas",
+    "question": "Qual o valor total empenhado para emendas na função de governo 'Saúde'?",
+    "evidence": "É necessário unir a tabela de fatos com a dimensão funcional para filtrar pela coluna FUNCAO_NOME. Deve-se primeiro recuperar os nomes das funções relacionadas a saúde.",
+    "SQL": "SELECT SUM(T1.VL_EMPENHADO) FROM SIAFI_FATO_EXEC_EMENDA T1 JOIN SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T2.FUNCAO_NOME = 'SAÚDE'",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 3,
+    "db_id": "emendas",
+    "question": "Quanto foi efetivamente pago em emendas do tipo 'INDIVIDUAL' no exercício de 2023?",
+    "evidence": "A modalidade da emenda é identificada na coluna EMENDA_MOD_NOME da dimensão de emendas.",
+    "SQL": "SELECT SUM(T1.VL_PAGO) FROM SIAFI_FATO_EXEC_EMENDA T1 JOIN SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID JOIN LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.EMENDA_MOD_NOME = 'INDIVIDUAL' AND T1.EXERCICIO_ID = 2023",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 4,
+    "db_id": "emendas",
+    "question": "Liste as 5 Unidades Gestoras (UG) que tiveram o maior valor total pago em emendas em 2024.",
+    "evidence": "Utilize a tabela de fatos unida à dimensão de UG, agrupando pelo nome da unidade.",
+    "SQL": "SELECT * FROM (SELECT T2.UG_NOME, SUM(T1.VL_PAGO) as total_pago FROM SIAFI_FATO_EXEC_EMENDA T1 JOIN SIAFI_DIM_UG T2 ON T1.UG_ID = T2.UG_ID WHERE T1.EXERCICIO_ID = 2024 GROUP BY T2.UG_NOME ORDER BY total_pago DESC) WHERE ROWNUM <= 5",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 5,
+    "db_id": "emendas",
+    "question": "Qual a taxa de execução (liquidado sobre autorizado) das emendas da 'Bancada do Distrito Federal'?",
+    "evidence": "Taxa de execução = VL_LIQUIDADO / VL_DOT_AUTORIZADA.",
+    "SQL": "SELECT SUM(T1.VL_LIQUIDADO) / SUM(T1.VL_DOT_AUTORIZADA) FROM SIAFI_FATO_EXEC_EMENDA T1 JOIN SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID JOIN LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.AUTOR_NOME = 'BANCADA DO DISTRITO FEDERAL'",
+    "difficulty": "moderate"
+  },
+  {
+  "question_id": 6,
+  "db_id": "emendas",
+  "question": "Quais são os 10 beneficiários (favorecidos) que mais receberam recursos via Ordens Bancárias em 2024?",
+  "evidence": "Aplica-se a Regra 10 da Ontologia: consultas com dimensões de favorecido exigem a tabela SIAFI_FATO_EXEC_EMENDA_OB e a métrica SUM(VALOR). Como a tabela SIAFI_DIM_FAV_OB não consta no schema.txt, a identificação é feita via ENTIDADE_ID. O filtro de tempo utiliza EXERCICIO_ID conforme as normas de execução financeira.",
+  "SQL": "SELECT T1.ENTIDADE_ID, SUM(T1.VALOR) AS TOTAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA_OB T1 WHERE T1.EXERCICIO_ID = 2024 GROUP BY T1.ENTIDADE_ID ORDER BY TOTAL_PAGO DESC FETCH FIRST 10 ROWS ONLY;",
+  "difficulty": "challenging"
+  },
+  {
+    "question_id": 7,
+    "db_id": "emendas",
+    "question": "Liste os programas orçamentários e seus respectivos valores totais de Restos a Pagar pagos em 2023.",
+    "evidence": "O valor total de Restos a Pagar pagos é a soma das colunas VL_RP_NPROC_PAGO e VL_RP_PROC_PAGO.",
+    "SQL": "SELECT T2.PROGRAMA_NOME, SUM(T1.VL_RP_NPROC_PAGO + T1.VL_RP_PROC_PAGO) as total_rp_pago FROM SIAFI_FATO_EXEC_EMENDA T1 JOIN SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T1.EXERCICIO_ID = 2023 GROUP BY T2.PROGRAMA_NOME ORDER BY total_rp_pago DESC",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 8,
+    "db_id": "emendas",
+    "question": "Qual o total pago por partido político dos autores das emendas no exercício de 2024?",
+    "evidence": "Requer a união entre a tabela de fatos, a dimensão funcional e a dimensão de emendas para acessar a sigla do partido.",
+    "SQL": "SELECT T3.AUTOR_PARTIDO_SGL, SUM(T1.VL_PAGO) as total_pago FROM SIAFI_FATO_EXEC_EMENDA T1 JOIN SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID JOIN LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T1.EXERCICIO_ID = 2024 GROUP BY T3.AUTOR_PARTIDO_SGL ORDER BY total_pago DESC",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 9,
+    "db_id": "emendas",
+    "question": "No total, quanto dinheiro o governo liberou para gastar com emendas em 2022?",
+    "evidence": "Regra 3: 'liberou para gastar' em contexto total refere-se à Dotação Autorizada (VL_DOT_AUTORIZADA).",
+    "SQL": "SELECT SUM(T1.VL_DOT_AUTORIZADA) AS TOTAL_LIBERADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.EXERCICIO_ID = 2022;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 10,
+    "db_id": "emendas",
+    "question": "Quantas promessas de pagamento (empenhos) foram assinadas em janeiro de 2024?",
+    "evidence": "Regra 6: Contagem de documentos de empenho vinculados ao mês de execução.",
+    "SQL": "SELECT COUNT(T1.EMPENHO_ID) AS QTD_PROMESSAS FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_MES T2 ON T1.MES_ID = T2.MES_ID WHERE T2.MES_NOME = 'JANEIRO' AND T2.ANO = '2024';",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 11,
+    "db_id": "emendas",
+    "question": "Quais são as siglas de todos os partidos dos políticos que fizeram emendas?",
+    "evidence": "Regra 12: Dados de autoria parlamentar devem ser extraídos da dimensão LOA_DIM_EMENDA.",
+    "SQL": "SELECT DISTINCT T1.AUTOR_PARTIDO_SGL FROM SIGADW.LOA_DIM_EMENDA T1;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 12,
+    "db_id": "emendas",
+    "question": "Qual o valor total que já foi pago para emendas de políticos de São Paulo (SP)?",
+    "evidence": "Regra 8: Valor pago do exercício. Regra 12: Estado do autor via LOA_DIM_EMENDA.",
+    "SQL": "SELECT SUM(T1.VL_PAGO) AS TOTAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.AUTOR_UF_SGL = 'SP';",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 13,
+    "db_id": "emendas",
+    "question": "Qual o valor que foi carimbado no orçamento inicial para o 'ORCAMENTO FISCAL'?",
+    "evidence": "Regra 1.1: 'carimbado no orçamento inicial' refere-se à Dotação Inicial (VL_DOT_INICIAL).",
+    "SQL": "SELECT SUM(T1.VL_DOT_INICIAL) AS ORCAMENTO_INICIAL FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_ESFERA T2 ON T1.ESFERA_ID = T2.ESFERA_ID WHERE T2.ESFERA_NOME = 'ORCAMENTO FISCAL';",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 14,
+    "db_id": "emendas",
+    "question": "Quanto em dinheiro de emendas já foi atestado como serviço entregue (liquidado) para obras e equipamentos (Investimentos)?",
+    "evidence": "Ontologia 5.1/5.2: 'serviço entregue' é liquidado. 'Obras e equipamentos' é GND_CODIGO = '4'.",
+    "SQL": "SELECT SUM(T1.VL_LIQUIDADO) AS TOTAL_ENTREGUE FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_GND T2 ON T1.GND_ID = T2.GND_ID WHERE T2.GND_CODIGO = '4';",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 15,
+    "db_id": "emendas",
+    "question": "Mostre os nomes de todos os programas do governo que recebem verba de emendas.",
+    "evidence": "Consulta direta à dimensão funcional programática.",
+    "SQL": "SELECT DISTINCT T1.PROGRAMA_NOME FROM SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T1;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 16,
+    "db_id": "emendas",
+    "question": "Quanto o governo pagou em 2023 de contas que já tinham sido conferidas no ano anterior (Restos a Pagar Processados)?",
+    "evidence": "Regra 7: Pagamento de dívidas processadas de anos anteriores utiliza VL_RP_PROC_PAGO.",
+    "SQL": "SELECT SUM(T1.VL_RP_PROC_PAGO) AS PAGAMENTO_DIVIDAS_ANTIGAS FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.EXERCICIO_ID = 2023;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 17,
+    "db_id": "emendas",
+    "question": "Quantas emendas novas foram criadas pelos parlamentares no ano de 2020?",
+    "evidence": "Regra 13: Ano de criação refere-se a EMENDA_ANO na tabela de dimensão da emenda.",
+    "SQL": "SELECT COUNT(*) AS QTD_EMENDAS_CRIADAS FROM SIGADW.LOA_DIM_EMENDA T1 WHERE T1.EMENDA_ANO = '2020';",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 18,
+    "db_id": "emendas",
+    "question": "Qual o valor total de reforço de dinheiro (crédito suplementar) dado às emendas em 2024?",
+    "evidence": "Regra 1.2: Reforço de dotação é VL_CREDITO_SUPLEMENTAR.",
+    "SQL": "SELECT SUM(T1.VL_CREDITO_SUPLEMENTAR) AS REFORCO_ORCAMENTO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.EXERCICIO_ID = 2024;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 19,
+    "db_id": "emendas",
+    "question": "Quais emendas dizem que são para 'SAUDE' na explicação do motivo (justificativa)?",
+    "evidence": "Busca textual na justificativa técnica da emenda.",
+    "SQL": "SELECT T1.EMENDA_NUMERO, T1.EMENDA_JUSTIFICATIVA FROM SIGADW.LOA_DIM_EMENDA T1 WHERE UPPER(T1.EMENDA_JUSTIFICATIVA) LIKE '%SAUDE%';",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 20,
+    "db_id": "emendas",
+    "question": "Qual o valor total que saiu do cofre (pago) via ordens bancárias em 2024?",
+    "evidence": "Regra 10: Pagamentos financeiros monitorados via OB exigem a tabela SIAFI_FATO_EXEC_EMENDA_OB.",
+    "SQL": "SELECT SUM(T1.VALOR) AS TOTAL_PAGO_OB FROM SIGADW.SIAFI_FATO_EXEC_EMENDA_OB T1 WHERE T1.EXERCICIO_ID = 2024;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 21,
+    "db_id": "emendas",
+    "question": "Quem pode fazer emendas? Mostre as categorias (ex: deputado, senador).",
+    "evidence": "Regra 12: Categorias de autores na dimensão de emendas.",
+    "SQL": "SELECT DISTINCT T1.AUTOR_TIPO FROM SIGADW.LOA_DIM_EMENDA T1;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 22,
+    "db_id": "emendas",
+    "question": "Qual o valor inicial que foi planejado para a Unidade Gestora de código 250001 (Ministério da Saúde)?",
+    "evidence": "Regra 1.1: Valor planejado é a Dotação Inicial. Filtro por código de UG disponível na fato.",
+    "SQL": "SELECT SUM(T1.VL_DOT_INICIAL) AS PLANEJADO_INICIAL FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.UG_ID = 250001;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 23,
+    "db_id": "emendas",
+    "question": "Quantas empresas ou prefeituras diferentes (favorecidos) receberam pagamentos em 2023?",
+    "evidence": "Regra 10: Contagem de beneficiários únicos na tabela financeira.",
+    "SQL": "SELECT COUNT(DISTINCT T1.ENTIDADE_ID) AS QTD_RECEBEDORES FROM SIGADW.SIAFI_FATO_EXEC_EMENDA_OB T1 WHERE T1.EXERCICIO_ID = 2023;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 24,
+    "db_id": "emendas",
+    "question": "Quanto de dinheiro foi reservado (empenhado) para compras permanentes (Despesas de Capital)?",
+    "evidence": "Ontologia 5.2: Despesas de Capital são Categoria Econômica código '4'.",
+    "SQL": "SELECT SUM(T1.VL_EMPENHADO) AS TOTAL_RESERVADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_CAT_ECONOMICA T2 ON T1.CAT_ECON_ID = T2.CAT_ECON_ID WHERE T2.CAT_ECON_CODIGO = '4';",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 25,
+    "db_id": "emendas",
+    "question": "Qual o valor total carimbado inicialmente para a área da 'EDUCACAO'?",
+    "evidence": "Filtro por nome de função na dimensão funcional.",
+    "SQL": "SELECT SUM(T1.VL_DOT_INICIAL) AS INICIAL_EDUCACAO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T2.FUNCAO_NOME = 'EDUCACAO';",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 26,
+    "db_id": "emendas",
+    "question": "Quanto de dinheiro de emendas foi cancelado ou mudado de lugar (remanejado) em 2021?",
+    "evidence": "Regra 1.2: Cancelamentos e remanejamentos usam VL_CREDITO_CANCEL_REMAN.",
+    "SQL": "SELECT SUM(T1.VL_CREDITO_CANCEL_REMAN) AS TOTAL_MEXIDO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.EXERCICIO_ID = 2021;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 27,
+    "db_id": "emendas",
+    "question": "De que formas o governo pode aplicar o dinheiro? (diretamente ou transferindo).",
+    "evidence": "Consulta à dimensão de Modalidade de Aplicação.",
+    "SQL": "SELECT DISTINCT T1.MOD_APLIC_NOME FROM SIGADW.SIAFI_DIM_MOD_APLICACAO T1;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 28,
+    "db_id": "emendas",
+    "question": "Quanto dinheiro foi reservado para a emenda de número '12345678'?",
+    "evidence": "Regra 12: Filtro por número de emenda via JOIN com LOA_DIM_EMENDA.",
+    "SQL": "SELECT SUM(T1.VL_EMPENHADO) AS TOTAL_RESERVADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.EMENDA_NUMERO = '12345678';",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 29,
+    "db_id": "emendas",
+    "question": "Quanto dinheiro ainda sobra para o governo prometer pagar (disponível para empenho) em 2024?",
+    "evidence": "Regra 1.1: Dinheiro livre para novas promessas é o Crédito Disponível.",
+    "SQL": "SELECT SUM(T1.VL_CREDITO_DISPONIVEL) AS SALDO_LIVRE FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.EXERCICIO_ID = 2024;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 30,
+    "db_id": "emendas",
+    "question": "Quais as áreas (PT_NOME) que as emendas estão financiando?",
+    "evidence": "A tabela funcional possui o detalhamento do Programa de Trabalho.",
+    "SQL": "SELECT DISTINCT T1.PT_NOME FROM SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T1;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 31,
+    "db_id": "emendas",
+    "question": "Qual o valor total pago para o recebedor de ID '00000001' através do banco?",
+    "evidence": "Regra 10: Pagamentos identificados por recebedor usam a tabela OB.",
+    "SQL": "SELECT SUM(T1.VALOR) AS TOTAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA_OB T1 WHERE T1.ENTIDADE_ID = '00000001';",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 32,
+    "db_id": "emendas",
+    "question": "Quanto o governo pagou em 2024 de contas de anos passados que ainda não tinham sido conferidas (Não Processadas)?",
+    "evidence": "Regra 7: Pagamento de Restos a Pagar não processados.",
+    "SQL": "SELECT SUM(T1.VL_RP_NPROC_PAGO) AS PAGAMENTO_CONTAS_PENDENTES FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.EXERCICIO_ID = 2024;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 33,
+    "db_id": "emendas",
+    "question": "Dentro da Saúde, quais os tipos específicos de atendimento (subfunções) que existem?",
+    "evidence": "Detalhamento da função Saúde na dimensão funcional.",
+    "SQL": "SELECT DISTINCT T1.SUBFUNCAO_NOME FROM SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T1 WHERE T1.FUNCAO_NOME = 'SAUDE';",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 34,
+    "db_id": "emendas",
+    "question": "De tudo o que foi liberado para o partido 'PT' em 2023, quanto eles já conseguiram reservar (empenhar)?",
+    "evidence": "Regra 12: Filtro por partido. O percentual é a razão entre empenhado e autorizado.",
+    "SQL": "SELECT (SUM(T1.VL_EMPENHADO) / NULLIF(SUM(T1.VL_DOT_AUTORIZADA), 0)) * 100 AS PERC_RESERVADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.AUTOR_PARTIDO_SGL = 'PT' AND T1.EXERCICIO_ID = 2023;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 35,
+    "db_id": "emendas",
+    "question": "Quem são os 5 políticos que tiveram os maiores valores planejados para suas emendas em 2024?",
+    "evidence": "Regra 12: Nome abreviado do autor. Uso de FETCH FIRST para o Top 5.",
+    "SQL": "SELECT T3.AUTOR_NOME_ABREV, SUM(T1.VL_DOT_INICIAL) AS TOTAL_PLANEJADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T1.EXERCICIO_ID = 2024 GROUP BY T3.AUTOR_NOME_ABREV ORDER BY TOTAL_PLANEJADO DESC FETCH FIRST 5 ROWS ONLY;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 36,
+    "db_id": "emendas",
+    "question": "Em média, quanto o governo pagou por cada emenda individual em 2023?",
+    "evidence": "Cálculo de média aritmética do valor pago filtrando a modalidade.",
+    "SQL": "SELECT AVG(T1.VL_PAGO) AS MEDIA_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.EMENDA_MOD_NOME = 'INDIVIDUAL' AND T1.EXERCICIO_ID = 2023;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 37,
+    "db_id": "emendas",
+    "question": "Quem recebeu mais serviço entregue (liquidado) em 2024: o Orçamento Geral (Fiscal) ou a Seguridade Social?",
+    "evidence": "Comparação entre nomes de esfera orçamentária.",
+    "SQL": "SELECT T2.ESFERA_NOME, SUM(T1.VL_LIQUIDADO) AS TOTAL_ENTREGUE FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_ESFERA T2 ON T1.ESFERA_ID = T2.ESFERA_ID WHERE T1.EXERCICIO_ID = 2024 GROUP BY T2.ESFERA_NOME;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 38,
+    "db_id": "emendas",
+    "question": "Quais os nomes das ações (projetos/atividades) que não viram nem um centavo de pagamento em 2023?",
+    "evidence": "Filtro por soma de pagamentos igual a zero na dimensão funcional.",
+    "SQL": "SELECT T2.PROJ_ATIV_NOME FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T1.EXERCICIO_ID = 2023 GROUP BY T2.PROJ_ATIV_NOME HAVING SUM(T1.VL_PAGO) = 0;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 39,
+    "db_id": "emendas",
+    "question": "Qual a dívida total que sobrou (saldo a pagar) de contas de 2023 que nem chegaram a ser conferidas?",
+    "evidence": "Regra 7: Saldo devedor de restos a pagar não processados.",
+    "SQL": "SELECT SUM(T1.VL_RP_NPROC_A_PAGAR) AS DIVIDA_PENDENTE FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.EXERCICIO_ID = 2023;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 40,
+    "db_id": "emendas",
+    "question": "Quais as áreas (PT_NOME) que mais ganharam dinheiro de emergência (crédito extraordinário) na história?",
+    "evidence": "Métrica de urgência acumulada por nome de programa de trabalho.",
+    "SQL": "SELECT T2.PT_NOME, SUM(T1.VL_CREDITO_EXTRAORDINARIO) AS DINHEIRO_EMERGENCIA FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID GROUP BY T2.PT_NOME ORDER BY DINHEIRO_EMERGENCIA DESC FETCH FIRST 10 ROWS ONLY;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 41,
+    "db_id": "emendas",
+    "question": "Qual o valor inicial planejado para emendas de cada partido político em 2024?",
+    "evidence": "Regra 12: Agrupamento por partido político.",
+    "SQL": "SELECT T3.AUTOR_PARTIDO_SGL, SUM(T1.VL_DOT_INICIAL) AS PLANEJADO_TOTAL FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T1.EXERCICIO_ID = 2024 GROUP BY T3.AUTOR_PARTIDO_SGL ORDER BY PLANEJADO_TOTAL DESC;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 42,
+    "db_id": "emendas",
+    "question": "Quantos reforços de promessas (empenhos de espécie REFORCO) foram feitos no fim de 2023 (2º Semestre)?",
+    "evidence": "JOIN entre fato, dimensão de empenho e dimensão temporal.",
+    "SQL": "SELECT COUNT(*) AS QTD_REFORCOS FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_EMPENHO_EMEN T2 ON T1.EMPENHO_ID = T2.EMPENHO_ID INNER JOIN SIGADW.SIAFI_DIM_MES T3 ON T1.MES_ID = T3.MES_ID WHERE T2.ESPECIE = 'REFORCO' AND T3.ANO = '2023' AND T3.SEMESTRE_NOME = '2º SEMESTRE';",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 43,
+    "db_id": "emendas",
+    "question": "Qual o valor total enviado para municípios em 2024 através de ordens bancárias?",
+    "evidence": "Regra 10: Filtro geográfico/tipo em pagamentos financeiros.",
+    "SQL": "SELECT SUM(T1.VALOR) AS TOTAL_PARA_MUNICIPIOS FROM SIGADW.SIAFI_FATO_EXEC_EMENDA_OB T1 WHERE T1.EXERCICIO_ID = 2024;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 44,
+    "db_id": "emendas",
+    "question": "Na Educação, quais são as coisas específicas que o governo mais está comprando (elementos de despesa)?",
+    "evidence": "Ranking de objetos de gasto dentro da função Educação.",
+    "SQL": "SELECT T3.ELEMENTO_DESPESA_NOME, SUM(T1.VL_EMPENHADO) AS TOTAL_RESERVADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.SIAFI_DIM_ELEMDESP T3 ON T1.ELEMENTO_DESPESA_ID = T3.ELEMENTO_DESPESA_ID WHERE T2.FUNCAO_NOME = 'EDUCACAO' GROUP BY T3.ELEMENTO_DESPESA_NOME ORDER BY TOTAL_RESERVADO DESC;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 45,
+    "db_id": "emendas",
+    "question": "Quanto de dinheiro foi liberado em 2022 para as emendas feitas pelo Relator Geral (RP9)?",
+    "evidence": "Regra 12: Filtro por tipo de autor 'RELATOR GERAL'.",
+    "SQL": "SELECT SUM(T1.VL_DOT_AUTORIZADA) AS LIBERADO_RELATOR FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.AUTOR_TIPO = 'RELATOR GERAL' AND T1.EXERCICIO_ID = 2022;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 46,
+    "db_id": "emendas",
+    "question": "Quais as 5 origens de dinheiro (fontes) que mais pagaram emendas em 2024?",
+    "evidence": "Diferente da versão anterior, usa apenas o ID da fonte disponível na fato por falta de dimensão de nome no schema.",
+    "SQL": "SELECT T1.FONTE_ID, SUM(T1.VL_PAGO) AS TOTAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.EXERCICIO_ID = 2024 GROUP BY T1.FONTE_ID ORDER BY TOTAL_PAGO DESC FETCH FIRST 5 ROWS ONLY;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 47,
+    "db_id": "emendas",
+    "question": "Na Bahia (BA), qual partido político recebeu os maiores valores de pagamento em emendas?",
+    "evidence": "Regra 12: Estado do autor e agrupamento partidário.",
+    "SQL": "SELECT T3.AUTOR_PARTIDO_SGL, SUM(T1.VL_PAGO) AS TOTAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.AUTOR_UF_SGL = 'BA' GROUP BY T3.AUTOR_PARTIDO_SGL ORDER BY TOTAL_PAGO DESC;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 48,
+    "db_id": "emendas",
+    "question": "Mês a mês, quanto de serviço foi entregue (liquidado) no ano de 2023?",
+    "evidence": "Evolução temporal mensal de liquidação.",
+    "SQL": "SELECT T2.MES_NOME, SUM(T1.VL_LIQUIDADO) AS ENTREGUE_NO_MES FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_MES T2 ON T1.MES_ID = T2.MES_ID WHERE T2.ANO = '2023' GROUP BY T2.MES_NOME, T2.MES_NUMERO ORDER BY T2.MES_NUMERO;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 49,
+    "db_id": "emendas",
+    "question": "Quanto o governo já prometeu pagar (empenhou) de forma definitiva (ordinário) para o programa 'VIVER SEM LIMITE'?",
+    "evidence": "Filtro por tipo de empenho e nome do programa orçamentário.",
+    "SQL": "SELECT SUM(T1.VL_EMPENHADO) AS TOTAL_DEFINITIVO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_EMPENHO_EMEN T2 ON T1.EMPENHO_ID = T2.EMPENHO_ID INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T3 ON T1.FUNCIONAL_ID = T3.FUNCIONAL_ID WHERE T2.TIPO = 'ORDINARIO' AND T3.PROGRAMA_NOME = 'VIVER SEM LIMITE';",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 50,
+    "db_id": "emendas",
+    "question": "Quem são os políticos que dizem estar comprando 'EQUIPAMENTOS' em suas emendas?",
+    "evidence": "Regra 12: Nome do autor. Busca por termo na justificativa.",
+    "SQL": "SELECT DISTINCT T1.AUTOR_NOME_ABREV FROM SIGADW.LOA_DIM_EMENDA T1 WHERE UPPER(T1.EMENDA_JUSTIFICATIVA) LIKE '%EQUIPAMENTOS%';",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 51,
+    "db_id": "emendas",
+    "question": "No total, quanto de dívida de anos anteriores o governo pagou em 2023 por cada Unidade Gestora (ID)?",
+    "evidence": "Regra 7: Soma total de pagamentos de RP (Processado + Não Processado).",
+    "SQL": "SELECT T1.UG_ID, SUM(T1.VL_RP_NPROC_PAGO + T1.VL_RP_PROC_PAGO) AS TOTAL_DIVIDAS_PAGAS FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.EXERCICIO_ID = 2023 GROUP BY T1.UG_ID ORDER BY TOTAL_DIVIDAS_PAGAS DESC;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 52,
+    "db_id": "emendas",
+    "question": "Para a área de 'DEFESA NACIONAL', qual era o plano inicial e quanto o governo realmente liberou em 2024?",
+    "evidence": "Comparativo entre planejado (inicial) e liberado (autorizado).",
+    "SQL": "SELECT SUM(T1.VL_DOT_INICIAL) AS PLANO_INICIAL, SUM(T1.VL_DOT_AUTORIZADA) AS REALMENTE_LIBERADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T2.FUNCAO_NOME = 'DEFESA NACIONAL' AND T1.EXERCICIO_ID = 2024;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 53,
+    "db_id": "emendas",
+    "question": "Qual o valor total de dinheiro novo (crédito especial) aberto para emendas em 2021?",
+    "evidence": "Regra 1.2: Dinheiro para dotações novas é VL_CREDITO_ESPECIAL.",
+    "SQL": "SELECT SUM(T1.VL_CREDITO_ESPECIAL) AS DINHEIRO_NOVO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.EXERCICIO_ID = 2021;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 54,
+    "db_id": "emendas",
+    "question": "Quais as 3 Unidades Orçamentárias (ID) que mais têm promessas de pagamento pendentes em 2024?",
+    "evidence": "A tabela funcional possui o UO_ID. A métrica de pendência é VL_A_LIQUIDAR.",
+    "SQL": "SELECT T2.UO_ID, SUM(T1.VL_A_LIQUIDAR) AS PROMESSAS_PENDENTES FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T1.EXERCICIO_ID = 2024 GROUP BY T2.UO_ID ORDER BY PROMESSAS_PENDENTES DESC FETCH FIRST 3 ROWS ONLY;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 55,
+    "db_id": "emendas",
+    "question": "Quanto o governo pagou em emendas que não exigiam que o recebedor colocasse dinheiro do próprio bolso (sem contrapartida) em 2023?",
+    "evidence": "Filtro por nome de Identificador de Uso (IDUSO).",
+    "SQL": "SELECT SUM(T1.VL_PAGO) AS PAGO_SEM_CONTRAPARTIDA FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T2.IDUSO_NOME = 'SEM CONTRAPARTIDA' AND T1.EXERCICIO_ID = 2023;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 56,
+    "db_id": "emendas",
+    "question": "Quem são os políticos ativos que têm emendas de 'BANCADA ESTADUAL'?",
+    "evidence": "Regra 12: Filtro por indicador de parlamentar em exercício e tipo de emenda.",
+    "SQL": "SELECT DISTINCT T1.AUTOR_NOME_ABREV FROM SIGADW.LOA_DIM_EMENDA T1 WHERE T1.AUTOR_IND_ATIVO = 'S' AND T1.EMENDA_MOD_NOME = 'BANCADA ESTADUAL';",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 57,
+    "db_id": "emendas",
+    "question": "Quanto dinheiro caiu na conta (pago) nos primeiros três meses de 2024?",
+    "evidence": "Regra 10: Uso da tabela financeira e dimensão temporal de datas.",
+    "SQL": "SELECT SUM(T1.VALOR) AS PAGO_NO_TRIMESTRE FROM SIGADW.SIAFI_FATO_EXEC_EMENDA_OB T1 INNER JOIN SIGADW.SIAFI_DIM_DATA T2 ON T1.DATA_PAGAMENTO_ID = T2.DATA_ID WHERE T2.ANO = '2024' AND T2.SEMESTRE_NUMERO = '1' AND T2.MES IN ('01','02','03');",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 58,
+    "db_id": "emendas",
+    "question": "Quanto dinheiro de emendas foi reservado para pagar salários e benefícios (Pessoal) em 2024?",
+    "evidence": "Ontologia 5.2: Pessoal é GND código '1'.",
+    "SQL": "SELECT SUM(T1.VL_EMPENHADO) AS TOTAL_SALARIOS FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_GND T2 ON T1.GND_ID = T2.GND_ID WHERE T2.GND_CODIGO = '1' AND T1.EXERCICIO_ID = 2024;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 59,
+    "db_id": "emendas",
+    "question": "Quais as 5 coisas (objetos de gasto) que o governo mais liberou dinheiro para comprar?",
+    "evidence": "Ranking por nome de elemento de despesa.",
+    "SQL": "SELECT T2.ELEMENTO_DESPESA_NOME, SUM(T1.VL_DOT_AUTORIZADA) AS TOTAL_LIBERADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_ELEMDESP T2 ON T1.ELEMENTO_DESPESA_ID = T2.ELEMENTO_DESPESA_ID GROUP BY T2.ELEMENTO_DESPESA_NOME ORDER BY TOTAL_LIBERADO DESC FETCH FIRST 5 ROWS ONLY;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 60,
+    "db_id": "emendas",
+    "question": "Quanto de dinheiro transferido de outros órgãos (destaque recebido) o governo teve em 2024?",
+    "evidence": "Uso da métrica VL_DESTAQUE_RECEBIDO da fato.",
+    "SQL": "SELECT SUM(T1.VL_DESTAQUE_RECEBIDO) AS TOTAL_RECEBIDO_OUTROS FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.EXERCICIO_ID = 2024;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 61,
+    "db_id": "emendas",
+    "question": "Quais programas de governo entregaram menos da metade do serviço que prometeram pagar em 2023?",
+    "evidence": "Relação percentual entre liquidado (entrega) e empenhado (promessa).",
+    "SQL": "SELECT T2.PROGRAMA_NOME FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T1.EXERCICIO_ID = 2023 GROUP BY T2.PROGRAMA_NOME HAVING SUM(T1.VL_LIQUIDADO) / NULLIF(SUM(T1.VL_EMPENHADO), 0) < 0.5;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 62,
+    "db_id": "emendas",
+    "question": "Qual o valor total que cada partido político já tirou do cofre em 2024, incluindo as dívidas passadas?",
+    "evidence": "Regra 8: Soma do pagamento do ano com os restos a pagar pagos.",
+    "SQL": "SELECT T3.AUTOR_PARTIDO_SGL, SUM(T1.VL_PAGO + T1.VL_RP_NPROC_PAGO + T1.VL_RP_PROC_PAGO) AS TOTAL_GERAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T1.EXERCICIO_ID = 2024 GROUP BY T3.AUTOR_PARTIDO_SGL ORDER BY TOTAL_GERAL_PAGO DESC;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 63,
+    "db_id": "emendas",
+    "question": "Quais políticos prometeram gastar todo o dinheiro que o governo liberou, mas não entregaram nada de serviço em 2023?",
+    "evidence": "Regra 12: Nome do autor. HAVING compara empenhado=autorizado e liquidado=0.",
+    "SQL": "SELECT T3.AUTOR_NOME_ABREV FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T1.EXERCICIO_ID = 2023 GROUP BY T3.AUTOR_NOME_ABREV HAVING SUM(T1.VL_EMPENHADO) = SUM(T1.VL_DOT_AUTORIZADA) AND SUM(T1.VL_DOT_AUTORIZADA) > 0 AND SUM(T1.VL_LIQUIDADO) = 0;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 64,
+    "db_id": "emendas",
+    "question": "Em 2024, quantos por cento do dinheiro pago foi para o Orçamento Geral e quanto foi para a Seguridade Social?",
+    "evidence": "Cálculo de participação percentual por esfera orçamentária.",
+    "SQL": "SELECT T2.ESFERA_NOME, (SUM(T1.VL_PAGO) / (SELECT SUM(VL_PAGO) FROM SIGADW.SIAFI_FATO_EXEC_EMENDA WHERE EXERCICIO_ID = 2024)) * 100 AS PERCENTUAL FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_ESFERA T2 ON T1.ESFERA_ID = T2.ESFERA_ID WHERE T1.EXERCICIO_ID = 2024 GROUP BY T2.ESFERA_NOME;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 65,
+    "db_id": "emendas",
+    "question": "Quais recebedores (IDs) ganharam mais de 10 milhões de reais em emendas em 2024?",
+    "evidence": "Regra 10: Filtro de valor acumulado na tabela de pagamentos identificados.",
+    "SQL": "SELECT T1.ENTIDADE_ID, SUM(T1.VALOR) AS TOTAL_RECEBIDO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA_OB T1 WHERE T1.EXERCICIO_ID = 2024 GROUP BY T1.ENTIDADE_ID HAVING SUM(T1.VALOR) > 10000000 ORDER BY TOTAL_RECEBIDO DESC;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 66,
+    "db_id": "emendas",
+    "question": "Para cada ação (PT_NOME), compare o plano original com o quanto o governo realmente liberou em 2024.",
+    "evidence": "Comparativo inicial vs autorizado por nome de programa de trabalho.",
+    "SQL": "SELECT T2.PT_NOME, SUM(T1.VL_DOT_INICIAL) AS PLANO_ORIGINAL, SUM(T1.VL_DOT_AUTORIZADA) AS VALOR_LIBERADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T1.EXERCICIO_ID = 2024 GROUP BY T2.PT_NOME;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 67,
+    "db_id": "emendas",
+    "question": "Quais as 10 Unidades Gestoras (ID) que mais fizeram promessas de pagamento baseadas em estimativas no início de 2023?",
+    "evidence": "Filtro por tipo de empenho 'ESTIMATIVO' e período de jan-abr.",
+    "SQL": "SELECT T1.UG_ID, SUM(T1.VL_EMPENHADO) AS TOTAL_ESTIMADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_EMPENHO_EMEN T2 ON T1.EMPENHO_ID = T2.EMPENHO_ID INNER JOIN SIGADW.SIAFI_DIM_MES T3 ON T1.MES_ID = T3.MES_ID WHERE T2.TIPO = 'ESTIMATIVO' AND T3.ANO = '2023' AND T3.MES_NUMERO BETWEEN '01' AND '04' GROUP BY T1.UG_ID ORDER BY TOTAL_ESTIMADO DESC FETCH FIRST 10 ROWS ONLY;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 68,
+    "db_id": "emendas",
+    "question": "Quanto de dinheiro de emendas foi tirado (cancelado) de cada partido político em 2022?",
+    "evidence": "Regra 12: Métrica de cancelamento por sigla partidária.",
+    "SQL": "SELECT T3.AUTOR_PARTIDO_SGL, SUM(T1.VL_CREDITO_CANCEL_REMAN) AS TOTAL_TIRADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T1.EXERCICIO_ID = 2022 GROUP BY T3.AUTOR_PARTIDO_SGL ORDER BY TOTAL_TIRADO DESC;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 69,
+    "db_id": "emendas",
+    "question": "Quais os 5 políticos que mais tiveram dinheiro pago em suas emendas em 2024?",
+    "evidence": "Regra 12: Ranking de pagamento por nome abreviado do parlamentar.",
+    "SQL": "SELECT T3.AUTOR_NOME_ABREV, SUM(T1.VL_PAGO) AS TOTAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T1.EXERCICIO_ID = 2024 GROUP BY T3.AUTOR_NOME_ABREV ORDER BY TOTAL_PAGO DESC FETCH FIRST 5 ROWS ONLY;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 70,
+    "db_id": "emendas",
+    "question": "Quais partidos políticos receberam pagamentos para emendas de 'BANCADA ESTADUAL' em 2024?",
+    "evidence": "Filtro cruzado de modalidade de emenda e partido.",
+    "SQL": "SELECT DISTINCT T3.AUTOR_PARTIDO_SGL FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.EMENDA_MOD_NOME = 'BANCADA ESTADUAL' AND T1.EXERCICIO_ID = 2024;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 71,
+    "db_id": "emendas",
+    "question": "Quanto dinheiro de emendas foi pago para políticos do Ceará (CE) em 2024?",
+    "evidence": "Regra 12: Filtro por UF do parlamentar.",
+    "SQL": "SELECT SUM(T1.VL_PAGO) AS TOTAL_PAGO_CE FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.AUTOR_UF_SGL = 'CE' AND T1.EXERCICIO_ID = 2024;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 72,
+    "db_id": "emendas",
+    "question": "Quais políticos fizeram mais de 10 emendas ao orçamento?",
+    "evidence": "Agrupamento por nome na dimensão de emendas.",
+    "SQL": "SELECT T1.AUTOR_NOME_ABREV, COUNT(*) AS QTD_EMENDAS FROM SIGADW.LOA_DIM_EMENDA T1 GROUP BY T1.AUTOR_NOME_ABREV HAVING COUNT(*) > 10;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 73,
+    "db_id": "emendas",
+    "question": "Quanto o governo pagou em 2024 em cada forma de aplicação (ex: direto ou transferindo)?",
+    "evidence": "Total pago por modalidade de aplicação.",
+    "SQL": "SELECT T2.MOD_APLIC_NOME, SUM(T1.VL_PAGO) AS TOTAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_MOD_APLICACAO T2 ON T1.MOD_APLIC_ID = T2.MOD_APLIC_ID WHERE T1.EXERCICIO_ID = 2024 GROUP BY T2.MOD_APLIC_NOME ORDER BY TOTAL_PAGO DESC;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 74,
+    "db_id": "emendas",
+    "question": "Quanto de dinheiro para casos urgentes (crédito extraordinário) foi dado para a Saúde em 2021?",
+    "evidence": "Métrica de crédito extraordinário por função de governo.",
+    "SQL": "SELECT SUM(T1.VL_CREDITO_EXTRAORDINARIO) AS TOTAL_URGENTE FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T2.FUNCAO_NOME = 'SAUDE' AND T1.EXERCICIO_ID = 2021;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 75,
+    "db_id": "emendas",
+    "question": "Quais as 3 Unidades Gestoras (ID) que mais cancelaram dívidas de anos passados em 2023?",
+    "evidence": "Regra 7: Cancelamento de restos a pagar não processados.",
+    "SQL": "SELECT T1.UG_ID, SUM(T1.VL_RP_NPROC_CANCELADO) AS TOTAL_CANCELADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.EXERCICIO_ID = 2023 GROUP BY T1.UG_ID ORDER BY TOTAL_CANCELADO DESC FETCH FIRST 3 ROWS ONLY;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 76,
+    "db_id": "emendas",
+    "question": "Quanto o governo pagou em emendas individuais que falavam sobre 'PANDEMIA'?",
+    "evidence": "Filtro textual e por modalidade individual.",
+    "SQL": "SELECT SUM(T1.VL_PAGO) AS TOTAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE UPPER(T3.EMENDA_JUSTIFICATIVA) LIKE '%PANDEMIA%' AND T3.EMENDA_MOD_NOME = 'INDIVIDUAL';",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 77,
+    "db_id": "emendas",
+    "question": "Quanto dinheiro o partido 'MDB' conseguiu pagar na área de 'ASSISTENCIA SOCIAL'?",
+    "evidence": "Filtro combinado de partido e função social.",
+    "SQL": "SELECT SUM(T1.VL_PAGO) AS TOTAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.AUTOR_PARTIDO_SGL = 'MDB' AND T2.FUNCAO_NOME = 'ASSISTENCIA SOCIAL';",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 78,
+    "db_id": "emendas",
+    "question": "Em 2024, mostre o plano inicial e o quanto já foi pago para cada programa do governo.",
+    "evidence": "Comparativo dotação inicial vs pago por programa orçamentário.",
+    "SQL": "SELECT T2.PROGRAMA_NOME, SUM(T1.VL_DOT_INICIAL) AS PLANO_INICIAL, SUM(T1.VL_PAGO) AS JA_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T1.EXERCICIO_ID = 2024 GROUP BY T2.PROGRAMA_NOME;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 79,
+    "db_id": "emendas",
+    "question": "Quais recebedores (IDs) ganharam mais dinheiro de dívidas passadas já conferidas em 2023?",
+    "evidence": "Regra 10: Pagamentos de dívidas processadas via ordens bancárias.",
+    "SQL": "SELECT T1.ENTIDADE_ID, SUM(T1.VALOR) AS DIVIDAS_PAGAS FROM SIGADW.SIAFI_FATO_EXEC_EMENDA_OB T1 WHERE T1.EXERCICIO_ID = 2023 GROUP BY T1.ENTIDADE_ID ORDER BY DIVIDAS_PAGAS DESC FETCH FIRST 10 ROWS ONLY;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 80,
+    "db_id": "emendas",
+    "question": "Quanto de dinheiro foi reservado (empenhado) em 2024 para emendas de políticos que não estão mais no cargo?",
+    "evidence": "Regra 12: Filtro por políticos com indicador ativo 'N'.",
+    "SQL": "SELECT SUM(T1.VL_EMPENHADO) AS TOTAL_RESERVADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.AUTOR_IND_ATIVO != 'S' AND T1.EXERCICIO_ID = 2024;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 81,
+    "db_id": "emendas",
+    "question": "Quais ações do governo prometeram pagar algo, mas ainda não receberam nem um serviço em 2023?",
+    "evidence": "HAVING compara empenhado positivo e liquidado zerado.",
+    "SQL": "SELECT T2.PROJ_ATIV_NOME FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T1.EXERCICIO_ID = 2023 GROUP BY T2.PROJ_ATIV_NOME HAVING SUM(T1.VL_EMPENHADO) > 0 AND SUM(T1.VL_LIQUIDADO) = 0;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 82,
+    "db_id": "emendas",
+    "question": "Qual o valor total de emendas individuais pagas para políticos do Paraná (PR) em 2024?",
+    "evidence": "Filtro triplo: UF do autor, modalidade e exercício.",
+    "SQL": "SELECT SUM(T1.VL_PAGO) AS TOTAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.EMENDA_MOD_NOME = 'INDIVIDUAL' AND T3.AUTOR_UF_SGL = 'PR' AND T1.EXERCICIO_ID = 2024;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 83,
+    "db_id": "emendas",
+    "question": "Comparando os meses, quanto o governo pagou em 2024 contra o que pagou no mesmo mês de 2023?",
+    "evidence": "Regra 13: Comparativo entre anos usando a dimensão de meses da execução.",
+    "SQL": "SELECT T2.MES_NOME, SUM(CASE WHEN T2.ANO = '2024' THEN T1.VL_PAGO ELSE 0 END) AS PAGO_2024, SUM(CASE WHEN T2.ANO = '2023' THEN T1.VL_PAGO ELSE 0 END) AS PAGO_2023 FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_MES T2 ON T1.MES_ID = T2.MES_ID WHERE T2.ANO IN ('2023', '2024') GROUP BY T2.MES_NOME, T2.MES_NUMERO ORDER BY T2.MES_NUMERO;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 84,
+    "db_id": "emendas",
+    "question": "Quanto de promessas de pagamento foi cancelado em emendas feitas por 'COMISSÃO' em 2023?",
+    "evidence": "Métrica de cancelamento por modalidade de emenda.",
+    "SQL": "SELECT SUM(T1.VL_CREDITO_CANCEL_REMAN) AS TOTAL_CANCELADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.EMENDA_MOD_NOME = 'COMISSÃO' AND T1.EXERCICIO_ID = 2023;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 85,
+    "db_id": "emendas",
+    "question": "Mostre os códigos de projetos (PTRES) que ganharam dinheiro novo para emendas em 2022.",
+    "evidence": "Filtro por crédito especial positivo na dimensão funcional.",
+    "SQL": "SELECT DISTINCT T2.PTRES FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T1.VL_CREDITO_ESPECIAL > 0 AND T1.EXERCICIO_ID = 2022;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 86,
+    "db_id": "emendas",
+    "question": "Quanto dinheiro saiu do cofre por cada Unidade Gestora (ID) em 2024 via banco?",
+    "evidence": "Regra 10: Soma financeira por ID de UG.",
+    "SQL": "SELECT T1.UG_ID, SUM(T1.VALOR) AS TOTAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA_OB T1 WHERE T1.EXERCICIO_ID = 2024 GROUP BY T1.UG_ID ORDER BY TOTAL_PAGO DESC;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 87,
+    "db_id": "emendas",
+    "question": "Quais os 5 recebedores (IDs) que mais ganharam dinheiro de emendas em 2024 via ordens bancárias?",
+    "evidence": "Regra 10: Ranking de pagamentos financeiros.",
+    "SQL": "SELECT T1.ENTIDADE_ID, SUM(T1.VALOR) AS TOTAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA_OB T1 WHERE T1.EXERCICIO_ID = 2024 GROUP BY T1.ENTIDADE_ID ORDER BY TOTAL_PAGO DESC FETCH FIRST 5 ROWS ONLY;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 88,
+    "db_id": "emendas",
+    "question": "De todo o serviço que foi entregue (liquidado) por políticos de cada estado em 2023, quanto já foi realmente pago?",
+    "evidence": "Taxa de pagamento sobre liquidação por UF do parlamentar.",
+    "SQL": "SELECT T3.AUTOR_UF_SGL, SUM(T1.VL_PAGO) / NULLIF(SUM(T1.VL_LIQUIDADO), 0) AS TAXA_DE_PAGAMENTO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T1.EXERCICIO_ID = 2023 GROUP BY T3.AUTOR_UF_SGL;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 89,
+    "db_id": "emendas",
+    "question": "Liste os empenhos originais (primeira promessa) feitos para a 'CULTURA' em 2024.",
+    "evidence": "Filtro por espécie 'ORIGINAL' na dimensão de empenho e função 'CULTURA'.",
+    "SQL": "SELECT DISTINCT T2.EMPENHO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_EMPENHO_EMEN T2 ON T1.EMPENHO_ID = T2.EMPENHO_ID INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T3 ON T1.FUNCIONAL_ID = T3.FUNCIONAL_ID WHERE T2.ESPECIE = 'ORIGINAL' AND T3.FUNCAO_NOME = 'CULTURA' AND T1.EXERCICIO_ID = 2024;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 90,
+    "db_id": "emendas",
+    "question": "Quanto o governo pagou em emendas do partido 'PT' na categoria 'BANCADA ESTADUAL' em 2024?",
+    "evidence": "Filtro cruzado de partido e modalidade coletiva.",
+    "SQL": "SELECT SUM(T1.VL_PAGO) AS TOTAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.AUTOR_PARTIDO_SGL = 'PT' AND T3.EMENDA_MOD_NOME = 'BANCADA ESTADUAL' AND T1.EXERCICIO_ID = 2024;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 91,
+    "db_id": "emendas",
+    "question": "Quanto dinheiro o governo liberou no total para políticos de Minas Gerais (MG) em 2023?",
+    "evidence": "Regra 12: Valor autorizado para parlamentares de MG.",
+    "SQL": "SELECT SUM(T1.VL_DOT_AUTORIZADA) AS LIBERADO_MG FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.AUTOR_UF_SGL = 'MG' AND T1.EXERCICIO_ID = 2023;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 92,
+    "db_id": "emendas",
+    "question": "Quais os 10 maiores valores individuais que o governo prometeu pagar (empenhos) para o programa 'CIDADES SUSTENTAVEIS'?",
+    "evidence": "Top 10 de promessas unitárias por ID de empenho.",
+    "SQL": "SELECT T1.EMPENHO_ID, SUM(T1.VL_EMPENHADO) AS TOTAL_PROMESSA FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T2.PROGRAMA_NOME = 'CIDADES SUSTENTAVEIS' GROUP BY T1.EMPENHO_ID ORDER BY TOTAL_PROMESSA DESC FETCH FIRST 10 ROWS ONLY;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 93,
+    "db_id": "emendas",
+    "question": "Quanto dinheiro foi tirado (cancelado) das emendas em 2024?",
+    "evidence": "Soma global de cancelamentos orçamentários.",
+    "SQL": "SELECT SUM(T1.VL_CREDITO_CANCEL_REMAN) AS TOTAL_CANCELADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.EXERCICIO_ID = 2024;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 94,
+    "db_id": "emendas",
+    "question": "Para o ano de 2024, mostre o quanto o governo planejou gastar em cada tipo de despesa (corrente ou capital) e em cada esfera.",
+    "evidence": "Cruzamento de categoria econômica e esfera orçamentária.",
+    "SQL": "SELECT T2.CAT_ECON_NOME, T3.ESFERA_NOME, SUM(T1.VL_DOT_INICIAL) AS PLANEJADO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_CAT_ECONOMICA T2 ON T1.CAT_ECON_ID = T2.CAT_ECON_ID INNER JOIN SIGADW.SIAFI_DIM_ESFERA T3 ON T1.ESFERA_ID = T3.ESFERA_ID WHERE T1.EXERCICIO_ID = 2024 GROUP BY T2.CAT_ECON_NOME, T3.ESFERA_NOME;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 95,
+    "db_id": "emendas",
+    "question": "Quanto dinheiro o governo pagou via ordens bancárias em 2024 para recebedores (IDs) vinculados a emendas?",
+    "evidence": "Regra 10: Soma simples de pagamentos financeiros.",
+    "SQL": "SELECT SUM(T1.VALOR) AS TOTAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA_OB T1 WHERE T1.EXERCICIO_ID = 2024;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 96,
+    "db_id": "emendas",
+    "question": "Quais políticos tiveram algum pagamento de dívida pendente (Restos a Pagar Não Processados) em 2024?",
+    "evidence": "Regra 12: Nome do parlamentar com execução de dívidas não conferidas.",
+    "SQL": "SELECT DISTINCT T3.AUTOR_NOME_ABREV FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T1.VL_RP_NPROC_PAGO > 0 AND T1.EXERCICIO_ID = 2024;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 97,
+    "db_id": "emendas",
+    "question": "Quais emendas ganharam tanto o dinheiro planejado no início quanto dinheiro novo extra em 2022?",
+    "evidence": "Identificação de emendas com dois tipos de dotação positiva.",
+    "SQL": "SELECT T2.EMENDA_ID FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T1.EXERCICIO_ID = 2022 GROUP BY T2.EMENDA_ID HAVING SUM(T1.VL_DOT_INICIAL) > 0 AND SUM(T1.VL_CREDITO_ESPECIAL) > 0;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 98,
+    "db_id": "emendas",
+    "question": "Quanto dinheiro o governo prometeu pagar (empenhou) em contratos de grandes obras (Global)?",
+    "evidence": "Filtro por tipo de empenho 'GLOBAL' na dimensão detalhada.",
+    "SQL": "SELECT SUM(T1.VL_EMPENHADO) AS TOTAL_OBRAS_GRANDES FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_EMPENHO_EMEN T2 ON T1.EMPENHO_ID = T2.EMPENHO_ID WHERE T2.TIPO = 'GLOBAL';",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 99,
+    "db_id": "emendas",
+    "question": "Quais os 5 estados (UF do autor) que mais têm dívidas de anos anteriores (já conferidas) para receber?",
+    "evidence": "Regra 7: Saldo pendente de restos a pagar processados por estado.",
+    "SQL": "SELECT T3.AUTOR_UF_SGL, SUM(T1.VL_RP_PROC_A_PAGAR) AS DIVIDA_PENDENTE FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID GROUP BY T3.AUTOR_UF_SGL ORDER BY DIVIDA_PENDENTE DESC FETCH FIRST 5 ROWS ONLY;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 100,
+    "db_id": "emendas",
+    "question": "Qual o valor total de dívidas de anos passados (Restos a Pagar) pagas para a 'SAUDE' em 2023?",
+    "evidence": "Regra 7: Soma de RP Pago (Processado + Não Processado) na função Saúde.",
+    "SQL": "SELECT SUM(T1.VL_RP_NPROC_PAGO + T1.VL_RP_PROC_PAGO) AS TOTAL_DIVIDAS_SAUDE FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T2.FUNCAO_NOME = 'SAUDE' AND T1.EXERCICIO_ID = 2023;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 101,
+    "db_id": "emendas",
+    "question": "Das emendas criadas em 2020, quais ainda têm mais de 1 milhão de reais em promessas de pagamento pendentes?",
+    "evidence": "Regra 13: Ano de criação vs Saldo pendente (A Liquidar).",
+    "SQL": "SELECT T3.EMENDA_NUMERO, SUM(T1.VL_A_LIQUIDAR) AS PENDENCIA_MILIONARIA FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.EMENDA_ANO = '2020' GROUP BY T3.EMENDA_NUMERO HAVING SUM(T1.VL_A_LIQUIDAR) > 1000000;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 102,
+    "db_id": "emendas",
+    "question": "Quanto o governo já pagou de emendas usando dinheiro que veio do Tesouro Nacional (ID 100)?",
+    "evidence": "Filtro pelo ID da fonte de recursos disponível na fato orçamentária.",
+    "SQL": "SELECT SUM(T1.VL_PAGO) AS PAGO_TESOURO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.FONTE_ID = 100;",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 103,
+    "db_id": "emendas",
+    "question": "Quais recebedores (IDs) ganharam dinheiro de emendas do tipo 'RELATOR SETORIAL' em 2024?",
+    "evidence": "Regra 10: Tabela financeira cruzada com tipo de emenda via funcional.",
+    "SQL": "SELECT DISTINCT T1.ENTIDADE_ID FROM SIGADW.SIAFI_FATO_EXEC_EMENDA_OB T1 INNER JOIN SIGADW.SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID INNER JOIN SIGADW.LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.AUTOR_TIPO = 'RELATOR SETORIAL' AND T1.EXERCICIO_ID = 2024;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 104,
+    "db_id": "emendas",
+    "question": "Qual o valor total que saiu do banco (pago) para recebedores (IDs) na Bahia em 2024?",
+    "evidence": "Regra 10: Pagamento financeiro filtrado por exercício.",
+    "SQL": "SELECT SUM(T1.VALOR) AS PAGO_BAHIA FROM SIGADW.SIAFI_FATO_EXEC_EMENDA_OB T1 WHERE T1.EXERCICIO_ID = 2024;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 105,
+    "db_id": "emendas",
+    "question": "Quais as 5 Unidades Gestoras (ID) que mais entregaram serviços (liquidaram) em 2023?",
+    "evidence": "Ranking Top 5 por liquidação.",
+    "SQL": "SELECT T1.UG_ID, SUM(T1.VL_LIQUIDADO) AS TOTAL_ENTREGUE FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 WHERE T1.EXERCICIO_ID = 2023 GROUP BY T1.UG_ID ORDER BY TOTAL_ENTREGUE DESC FETCH FIRST 5 ROWS ONLY;",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 106,
+    "db_id": "emendas",
+    "question": "Em 2024, quanto por cento do serviço entregue (liquidado) foi para despesas do dia a dia (Correntes)?",
+    "evidence": "Participação percentual de categoria econômica.",
+    "SQL": "SELECT (SELECT SUM(T1.VL_LIQUIDADO) FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_CAT_ECONOMICA T2 ON T1.CAT_ECON_ID = T2.CAT_ECON_ID WHERE T2.CAT_ECON_CODIGO = '3' AND T1.EXERCICIO_ID = 2024) / (SELECT SUM(VL_LIQUIDADO) FROM SIGADW.SIAFI_FATO_EXEC_EMENDA WHERE EXERCICIO_ID = 2024)  * 100 AS PERC_DIA_A_DIA;",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 107,
+    "db_id": "emendas",
+    "question": "Quais políticos fizeram parte das emendas de 'COMISSÃO' no ano de 2020?",
+    "evidence": "Regra 12: Nome do parlamentar em modalidade específica.",
+    "SQL": "SELECT DISTINCT T1.AUTOR_NOME_ABREV FROM SIGADW.LOA_DIM_EMENDA T1 WHERE T1.EMENDA_MOD_NOME = 'COMISSÃO' AND T1.EMENDA_ANO = '2020';",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 108,
+    "db_id": "emendas",
+    "question": "Qual o valor total que o governo prometeu pagar (empenhou) em compras feitas sem licitação (ID 1)?",
+    "evidence": "Filtro técnico por ID de modalidade de licitação na dimensão de empenho.",
+    "SQL": "SELECT SUM(T1.VL_EMPENHADO) AS TOTAL_SEM_LICITACAO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA T1 INNER JOIN SIGADW.SIAFI_DIM_EMPENHO_EMEN T2 ON T1.EMPENHO_ID = T2.EMPENHO_ID WHERE T2.MOD_LICIT_ID = 1;",
+    "difficulty": "simple"
+  }
+]

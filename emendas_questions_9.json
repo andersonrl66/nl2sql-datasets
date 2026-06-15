@@ -1,0 +1,74 @@
+[
+  {
+    "question_id": 0,
+    "db_id": "emendas",
+    "question": "Qual o valor total da dotação inicial das emendas para o exercício de 2024?",
+    "evidence": "A dotação inicial está na coluna VL_DOT_INICIAL da tabela de fatos.",
+    "SQL": "SELECT SUM(VL_DOT_INICIAL) FROM SIAFI_FATO_EXEC_EMENDA WHERE EXERCICIO_ID = 2024",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 1,
+    "db_id": "emendas",
+    "question": "Liste os nomes de todos os autores de emendas registrados no sistema.",
+    "evidence": "Os nomes dos autores estão na dimensão LOA_DIM_EMENDA.",
+    "SQL": "SELECT DISTINCT AUTOR_NOME FROM LOA_DIM_EMENDA",
+    "difficulty": "simple"
+  },
+  {
+    "question_id": 2,
+    "db_id": "emendas",
+    "question": "Qual o valor total empenhado para emendas na função de governo 'Saúde'?",
+    "evidence": "É necessário unir a tabela de fatos com a dimensão funcional para filtrar pela coluna FUNCAO_NOME. Deve-se primeiro recuperar os nomes das funções relacionadas a saúde.",
+    "SQL": "SELECT SUM(T1.VL_EMPENHADO) FROM SIAFI_FATO_EXEC_EMENDA T1 JOIN SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T2.FUNCAO_NOME = 'SAÚDE'",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 3,
+    "db_id": "emendas",
+    "question": "Quanto foi efetivamente pago em emendas do tipo 'INDIVIDUAL' no exercício de 2023?",
+    "evidence": "A modalidade da emenda é identificada na coluna EMENDA_MOD_NOME da dimensão de emendas.",
+    "SQL": "SELECT SUM(T1.VL_PAGO) FROM SIAFI_FATO_EXEC_EMENDA T1 JOIN SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID JOIN LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.EMENDA_MOD_NOME = 'INDIVIDUAL' AND T1.EXERCICIO_ID = 2023",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 4,
+    "db_id": "emendas",
+    "question": "Liste as 5 Unidades Gestoras (UG) que tiveram o maior valor total pago em emendas em 2024.",
+    "evidence": "Utilize a tabela de fatos unida à dimensão de UG, agrupando pelo nome da unidade.",
+    "SQL": "SELECT * FROM (SELECT T2.UG_NOME, SUM(T1.VL_PAGO) as total_pago FROM SIAFI_FATO_EXEC_EMENDA T1 JOIN SIAFI_DIM_UG T2 ON T1.UG_ID = T2.UG_ID WHERE T1.EXERCICIO_ID = 2024 GROUP BY T2.UG_NOME ORDER BY total_pago DESC) WHERE ROWNUM <= 5",
+    "difficulty": "moderate"
+  },
+  {
+    "question_id": 5,
+    "db_id": "emendas",
+    "question": "Qual a taxa de execução (liquidado sobre autorizado) das emendas da 'Bancada do Distrito Federal'?",
+    "evidence": "Taxa de execução = VL_LIQUIDADO / VL_DOT_AUTORIZADA.",
+    "SQL": "SELECT SUM(T1.VL_LIQUIDADO) / SUM(T1.VL_DOT_AUTORIZADA) FROM SIAFI_FATO_EXEC_EMENDA T1 JOIN SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID JOIN LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T3.AUTOR_NOME = 'BANCADA DO DISTRITO FEDERAL'",
+    "difficulty": "moderate"
+  },
+  {
+  "question_id": 6,
+  "db_id": "emendas",
+  "question": "Quais são os 10 beneficiários (favorecidos) que mais receberam recursos via Ordens Bancárias em 2024?",
+  "evidence": "Aplica-se a Regra 10 da Ontologia: consultas com dimensões de favorecido exigem a tabela SIAFI_FATO_EXEC_EMENDA_OB e a métrica SUM(VALOR). Como a tabela SIAFI_DIM_FAV_OB não consta no schema.txt, a identificação é feita via ENTIDADE_ID. O filtro de tempo utiliza EXERCICIO_ID conforme as normas de execução financeira.",
+  "SQL": "SELECT T1.ENTIDADE_ID, SUM(T1.VALOR) AS TOTAL_PAGO FROM SIGADW.SIAFI_FATO_EXEC_EMENDA_OB T1 WHERE T1.EXERCICIO_ID = 2024 GROUP BY T1.ENTIDADE_ID ORDER BY TOTAL_PAGO DESC FETCH FIRST 10 ROWS ONLY;",
+  "difficulty": "challenging"
+  },
+  {
+    "question_id": 7,
+    "db_id": "emendas",
+    "question": "Liste os programas orçamentários e seus respectivos valores totais de Restos a Pagar pagos em 2023.",
+    "evidence": "O valor total de Restos a Pagar pagos é a soma das colunas VL_RP_NPROC_PAGO e VL_RP_PROC_PAGO.",
+    "SQL": "SELECT T2.PROGRAMA_NOME, SUM(T1.VL_RP_NPROC_PAGO + T1.VL_RP_PROC_PAGO) as total_rp_pago FROM SIAFI_FATO_EXEC_EMENDA T1 JOIN SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID WHERE T1.EXERCICIO_ID = 2023 GROUP BY T2.PROGRAMA_NOME ORDER BY total_rp_pago DESC",
+    "difficulty": "challenging"
+  },
+  {
+    "question_id": 8,
+    "db_id": "emendas",
+    "question": "Qual o total pago por partido político dos autores das emendas no exercício de 2024?",
+    "evidence": "Requer a união entre a tabela de fatos, a dimensão funcional e a dimensão de emendas para acessar a sigla do partido.",
+    "SQL": "SELECT T3.AUTOR_PARTIDO_SGL, SUM(T1.VL_PAGO) as total_pago FROM SIAFI_FATO_EXEC_EMENDA T1 JOIN SIAFI_DIM_FUNCIONAL_EMEN T2 ON T1.FUNCIONAL_ID = T2.FUNCIONAL_ID JOIN LOA_DIM_EMENDA T3 ON T2.EMENDA_ID = T3.EMENDA_ID WHERE T1.EXERCICIO_ID = 2024 GROUP BY T3.AUTOR_PARTIDO_SGL ORDER BY total_pago DESC",
+    "difficulty": "challenging"
+  }
+]
